@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import Optional
 import google.generativeai as genai
 from dotenv import load_dotenv
 import os
@@ -26,7 +27,7 @@ app.add_middleware(
 class GradeRequest(BaseModel):
     question: str
     students_answer: str
-    prompt: str = None  # Optional
+    prompt: Optional[str] = None  # Optional
 
 @app.post("/grade")
 def grade_answer(data: GradeRequest):
@@ -74,3 +75,30 @@ async def evaluate_answer(req: AnswerRequest):
     # Simple check for keywords (customize as needed)
     correct = "mass" in student_answer and "space" in student_answer
     return {"correct": correct}
+
+class ChemistryQuestionRequest(BaseModel):
+    question: str
+
+@app.post("/answer-chemistry")
+async def answer_chemistry_question(req: ChemistryQuestionRequest):
+    prompt = f"""You are a chemistry expert. Answer the following chemistry question with detailed explanations, formulas, and proper chemical terminology.
+
+Question: {req.question}
+
+Instructions:
+- Provide a comprehensive chemistry answer
+- Include relevant chemical concepts and formulas
+- Use proper chemical notation and terminology
+- Give step-by-step explanations when appropriate
+- Focus purely on the chemistry content
+- Do not engage in conversation or acknowledge the question format
+
+Return only the chemistry answer."""
+
+    model = genai.GenerativeModel("gemini-2.5-flash")
+
+    try:
+        response = model.generate_content(prompt)
+        return {"answer": response.text}
+    except Exception as e:
+        return {"error": str(e)}
